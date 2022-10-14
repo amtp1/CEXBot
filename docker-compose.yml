@@ -8,5 +8,5 @@ services:
       context: .
       dockerfile: ./Dockerfile
     command: python main.py
-    volumes: 
+    volumes:
       - .:/app
