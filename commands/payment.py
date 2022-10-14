@@ -3,6 +3,8 @@ from datetime import datetime as dt
 
 from aiogram.types import CallbackQuery, Message
 from aiogram.dispatcher.storage import FSMContext
+from aiogram.utils.exceptions import BotKicked
+from loguru import logger
 
 from objects.globals import dp, config, bot
 from keyboards.keyboards import S_CURR_COUPLE, PaymentKB
@@ -46,8 +48,12 @@ async def get_amount(message: Message, state: FSMContext):
             F"💳Метод: {method}\n"
             F"💰Сумма: {amount}"
         )
-        await bot.send_message(config.group_id, deal_page)
-        return await message.answer(text="Анкета отправлена. Ожидайте ответа ...")
+        try:
+            await bot.send_message(config.group_id, deal_page)
+            return await message.answer(text="Анкета отправлена. Ожидайте ответа ...")
+        except BotKicked:
+            logger.error(f"Bot kicked from chat: {config.group_id}")
+            return await message.answer(text="При отправке возникла ошибка. Дождитесь её исправления ...")
 
 
 @dp.message_handler(lambda message: message.chat.type == "group")
