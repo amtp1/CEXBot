@@ -1,0 +1,7 @@
+__pycache__
+
+env/
+media/
+
+.env
+CEXBot.sqlite
