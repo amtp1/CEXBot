@@ -61,14 +61,20 @@ async def listen_admin_msg(message: Message):
     try:
         deal_id = re.split("#", re.split("\n", message.reply_to_message.text)[0])[1]
         link = message.text
-        link_page = (
-            F"🔗Ссылка на оплату: {link}\n"
-            F"❗️Ссылка действует 5 минут."
-        )
-        await bot.send_message(chat_id=message.from_user.id, text=link_page, reply_markup=PaymentKB.receipt(deal_id))
-        return await message.answer(text="Ссылка на оплату успешно отправлена.")
+        res = re.search("(?P<url>https?://[^\s]+)", link)
+        if res: 
+            link = res.group("url")
+            link_page = (
+                F"🔗Ссылка на оплату: {link}\n"
+                F"❗️Ссылка действует 5 минут."
+            )
+            await bot.send_message(chat_id=message.from_user.id, text=link_page, reply_markup=PaymentKB.receipt(deal_id), reply_to_message_id=message.reply_to_message.message_id + 1)
+            return await message.answer(text="Ссылка на оплату успешно отправлена.")
+        else:
+            await bot.send_message(chat_id=message.from_user.id, text=message.text, reply_to_message_id=message.reply_to_message.message_id + 1)
+            return await message.answer(text="Сообщение успешно отправлено.")
     except IndexError:
-        return await message.answer(text="На это сообщение нельзя ответчать!")
+        return await message.answer(text="На это сообщение нельзя отвечать!")
 
 
 @dp.message_handler(lambda message: message.chat.type == "group", content_types=["photo"])
@@ -83,7 +89,7 @@ async def listen_admin_photo(message: Message, state: FSMContext):
             f.close()
         deal = await Deal.objects.get(id=deal_id)
         await deal.update(finished=dt.utcnow())
-        await bot.send_photo(chat_id=user_id, photo=photo, caption=f"<b>Чек от администратора. (Анкета #{deal_id})</b>")
+        await bot.send_photo(chat_id=user_id, photo=photo, caption=f"<b>Чек от администратора. (Анкета #{deal_id})</b>", reply_to_message_id=message.reply_to_message.message_id + 1)
         return await message.answer(text="Чек успешно отправлен.")
     except IndexError:
         return await message.answer(text="На это сообщение нельзя ответчать!")
