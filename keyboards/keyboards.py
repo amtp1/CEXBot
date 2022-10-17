@@ -10,7 +10,7 @@ S_CURR_COUPLE = {
 R_CURR_COUPLE = {
     "euro": {"rouble": "Рубли"},
     "dollar": {"rouble": "Рубли"},
-    "rouble": {"euro": "Евро", "dollar": "Доллары"},
+    "rouble": {"euro": "Евро", "dollar": "Доллары", "tenge": "Тенге"},
     "tenge": {"rouble": "Рубли"}
 }  # Receive currency couple
 
@@ -56,10 +56,10 @@ class PaymentKB:
         elif self.send == "dollar" and self.receive == "rouble":
             payment_method = ["Revolut", "PayPal",
                               "TransferWise", "Inside US Transfers"]
-        elif self.send == "rouble" and self.receive in ["euro", "dollar"]:
+        elif self.send == "rouble" and self.receive in ["euro", "dollar", "tenge"]:
             payment_method = ["Номер карты", "СБП Тинькофф", "Сбер", "Альфа"]
         elif self.send == "tenge" and self.receive == "rouble":
-            payment_method = ["Перевод на карту", "Swift"]
+            payment_method = ["Перевод на карту", "Каспи"]
         return payment_method
 
     @staticmethod

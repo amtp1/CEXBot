@@ -96,6 +96,7 @@ async def listen_admin_photo(message: Message, state: FSMContext):
     except TypeError:
         return await message.answer(text="Нужно прикрепить ссылку!")
 
+
 @dp.callback_query_handler(lambda query: query.data.startswith(("receipt")))
 async def get_receipt(query: CallbackQuery, state: FSMContext):
     deal_id = re.sub("receipt_", "", query.data)

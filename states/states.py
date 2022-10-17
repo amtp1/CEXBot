@@ -10,7 +10,6 @@ class Payment(StatesGroup):
     get_amount = State()
     method = State()
     deal_id = State()
-    user_id = State()
 
 
 class Money(StatesGroup):
