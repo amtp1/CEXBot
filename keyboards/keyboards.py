@@ -1,4 +1,4 @@
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
 
 S_CURR_COUPLE = {
     "euro": "Евро",
@@ -8,11 +8,20 @@ S_CURR_COUPLE = {
 }  # Send currency couple
 
 R_CURR_COUPLE = {
-    "euro": {"rouble": "Рубли"},
-    "dollar": {"rouble": "Рубли"},
-    "rouble": {"euro": "Евро", "dollar": "Доллары", "tenge": "Тенге"},
-    "tenge": {"rouble": "Рубли"}
+    "euro": {"rouble": "Рубли", "product||service": "Оплата товара/сервиса"},
+    "dollar": {"rouble": "Рубли", "product||service": "Оплата товара/сервиса"},
+    "rouble": {"euro": "Евро", "dollar": "Доллары", "tenge": "Тенге", "product||service": "Оплата товара/сервиса"},
+    "tenge": {"rouble": "Рубли", "product||service": "Оплата товара/сервиса"}
 }  # Receive currency couple
+
+
+class StartKB:
+    @staticmethod
+    def start_keyboard():
+        start_choice = ReplyKeyboardMarkup(
+            resize_keyboard=True, keyboard=[[KeyboardButton(text="СТАРТ")]]
+        )
+        return start_choice
 
 
 class CurrencyKB:
@@ -60,6 +69,8 @@ class PaymentKB:
             payment_method = ["Номер карты", "СБП Тинькофф", "Сбер", "Альфа"]
         elif self.send == "tenge" and self.receive == "rouble":
             payment_method = ["Перевод на карту", "Каспи"]
+        else:
+            payment_method = ["Unknow"]
         return payment_method
 
     @staticmethod
