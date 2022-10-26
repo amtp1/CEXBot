@@ -61,15 +61,13 @@ async def listen_admin_msg(message: Message):
             return await message.answer(text="Ссылка на оплату успешно отправлена.")
         else:
             await bot.send_message(chat_id=message.from_user.id, text=message.text, reply_to_message_id=message.reply_to_message.message_id + 1)
-            return await message.answer(text="Сообщение успешно отправлено.")
     except IndexError:
-        return await message.answer(text="На это сообщение нельзя отвечать!")
+        await bot.send_message(chat_id=message.from_user.id, text=message.text, reply_to_message_id=message.reply_to_message.message_id - 1)
 
 
 @dp.message_handler(lambda message: message.chat.type == "private")
 async def listen_private_msg(message: Message):
-    await bot.send_message(chat_id=config.group_id, text=message.text, reply_to_message_id=message.reply_to_message.message_id + 1)
-    return await message.answer(text="Сообщение успешно отправлено!")
+    await bot.send_message(chat_id=config.group_id, text=message.text, reply_to_message_id=message.reply_to_message.message_id - 1)
 
 
 @dp.message_handler(lambda message: message.chat.type == "group", content_types=["photo"])
