@@ -1,16 +1,16 @@
 import re
 from datetime import datetime as dt
 
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 from aiogram.dispatcher.storage import FSMContext
 from aiogram.utils.exceptions import BotKicked
 from loguru import logger
 
 from objects.globals import dp, config, bot
-from keyboards.keyboards import S_CURR_COUPLE, PaymentKB
+from keyboards.keyboards import S_CURR_COUPLE, PaymentKB, StartKB
 from models.models import *
 from utils.converter import is_int
-from commands import start
+from commands import start, attach_receipt
 
 
 @dp.callback_query_handler(lambda query: query.data.startswith(("payment")))
@@ -37,7 +37,7 @@ async def get_amount(message: Message, state: FSMContext):
     deal = Deal.objects.filter(user=user, send=send, receive=receive, method=method, amount=amount)
     if await deal.exists():
         deal = list(await deal.all())[-1]
-        if not deal.finished:
+        if not deal.is_cancel:
             return await message.answer(text="Такая заявка находится в процессе ...")
         else:
             await create_deal(message, state, user, send, receive, method, amount)
@@ -65,9 +65,9 @@ async def listen_admin_msg(message: Message):
         await bot.send_message(chat_id=message.from_user.id, text=message.text, reply_to_message_id=message.reply_to_message.message_id - 1)
 
 
-@dp.message_handler(lambda message: message.chat.type == "private")
-async def listen_private_msg(message: Message):
-    await bot.send_message(chat_id=config.group_id, text=message.text, reply_to_message_id=message.reply_to_message.message_id - 1)
+#@dp.message_handler(lambda message: message.chat.type == "private")
+#async def listen_private_msg(message: Message):
+#    await bot.send_message(chat_id=config.group_id, text=message.text, reply_to_message_id=message.reply_to_message.message_id - 1)
 
 
 @dp.message_handler(lambda message: message.chat.type == "group", content_types=["photo"])
@@ -80,9 +80,9 @@ async def listen_admin_photo(message: Message, state: FSMContext):
         with open(path, "rb") as f:
             photo = f.read()
             f.close()
-        deal = await Deal.objects.get(id=deal_id)
-        await deal.update(finished=dt.utcnow())
-        await bot.send_photo(chat_id=user_id, photo=photo, caption=f"<b>Чек от администратора. (Анкета #{deal_id})</b>", reply_to_message_id=message.reply_to_message.message_id + 1)
+        await bot.send_photo(chat_id=user_id, photo=photo, caption=f"<b>Чек от администратора. (Анкета #{deal_id})</b>",
+            reply_to_message_id=message.reply_to_message.message_id + 1)
+        await finish_deal(message, state, deal_id)
         return await message.answer(text="Чек успешно отправлен.")
     except IndexError:
         return await message.answer(text="На это сообщение нельзя ответчать!")
@@ -107,18 +107,20 @@ async def read_user_receipt(message: Message, state: FSMContext):
     with open(path, "rb") as f:
         photo = f.read()
         f.close()
-    await state.finish()
     photo_caption = (
         f"<b>Чек анкеты #{deal_id}</b>\n"
         f"<b>ID пользователя: {message.from_user.id}</b>"
     )
     await bot.send_photo(chat_id=config.group_id, photo=photo, caption=photo_caption)
-    return await message.answer(text="Ожидайте чек от администратора ...")
+    await message.answer(text="Ожидайте чек от администратора ...")
+    return await state.set_state("message")
 
 
-async def create_deal(message, state, user, send, receive, method, amount):
+async def create_deal(message: Message, state: FSMContext, user, send, receive, method, amount):
     await state.finish()
+    is_chat = await User.objects.filter(user_id=message.from_user.id).update(is_chat=True)
     deal = await Deal.objects.create(user=user, send=send, receive=receive, method=method, amount=amount)
+    await state.update_data(deal_id=deal.id)
     deal_page = (
         F"<b>Новая анкета #{deal.pk}</b>\n"
         F"⚙️Обмен: {S_CURR_COUPLE.get(send)} ➜ {S_CURR_COUPLE.get(receive)}\n"
@@ -127,7 +129,24 @@ async def create_deal(message, state, user, send, receive, method, amount):
     )
     try:
         await bot.send_message(config.group_id, deal_page)
-        return await message.answer(text="Анкета отправлена. Ожидайте ответа ...")
+        await message.answer(text=
+            f"Анкета отправлена. Ожидайте ответа...\n"
+            f"Вы можете задать любой вопрос.")
+        return await state.set_state("message")
     except BotKicked:
         logger.error(f"Bot kicked from chat: {config.group_id}")
         return await message.answer(text="При отправке возникла ошибка. Дождитесь её исправления ...")
+
+
+async def finish_deal(message: Message, state: FSMContext, deal_id):
+    await state.finish()
+    user = await User.objects.get(user_id=message.from_user.id)
+    await user.update(is_chat=False)
+    deal = await Deal.objects.get(id=deal_id)
+    await deal.update(finished=dt.utcnow())
+    await bot.send_message(chat_id=message.from_user.id, text="Заявка успешно завершена!", reply_markup=StartKB.start_keyboard())
+
+
+@dp.message_handler(state="message")
+async def chat(message: Message):
+    await bot.send_message(chat_id=config.group_id, text=message.text)

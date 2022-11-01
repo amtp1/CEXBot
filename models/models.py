@@ -15,7 +15,8 @@ class User(orm.Model):
         "user_id": orm.Integer(),
         "username": orm.String(max_length=128, allow_null=True),
         "first_name": orm.String(max_length=128, allow_null=True),
-        "last_name": orm.String(max_length=128, allow_null=True)
+        "last_name": orm.String(max_length=128, allow_null=True),
+        "is_chat": orm.Boolean(default=False),
     }
 
 
@@ -29,6 +30,7 @@ class Deal(orm.Model):
         "receive": orm.String(max_length=64),
         "method": orm.String(max_length=128),
         "amount": orm.Float(),
+        "is_cancel": orm.Boolean(default=False),
         "created": orm.DateTime(default=dt.utcnow()),
         "finished": orm.DateTime(allow_null=True)
     }

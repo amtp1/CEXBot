@@ -75,7 +75,7 @@ class PaymentKB:
 
     @staticmethod
     def receipt(deal_id):
-        receipt_chose = InlineKeyboardMarkup(
-            inline_keyboard=[[InlineKeyboardButton(text="Прикрепить чек", callback_data=f"receipt_{deal_id}")]]
+        receipt_chose = ReplyKeyboardMarkup(
+            resize_keyboard=True, keyboard=[[KeyboardButton(text="Прикрепить чек")]]
         )
         return receipt_chose

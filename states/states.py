@@ -18,3 +18,7 @@ class Money(StatesGroup):
 
 class Receipt(StatesGroup):
     get_receipt = State()
+
+
+class Chat(StatesGroup):
+    message = State()
