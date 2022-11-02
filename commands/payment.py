@@ -148,5 +148,11 @@ async def finish_deal(message: Message, state: FSMContext, deal_id):
 
 
 @dp.message_handler(state="message")
-async def chat(message: Message):
-    await bot.send_message(chat_id=config.group_id, text=message.text)
+async def chat(message: Message, state: FSMContext):
+    data = await state.get_data()
+    deal_id = data.get("deal_id")
+    message_page = (
+        f"<b>ID заявки:</b> {deal_id}\n"
+        f"<b>Сообщение:</b> {message.text}"
+    )
+    await bot.send_message(chat_id=config.group_id, text=message_page)
