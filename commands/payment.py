@@ -47,22 +47,22 @@ async def get_amount(message: Message, state: FSMContext):
 
 @dp.message_handler(lambda message: message.chat.type == "group")
 async def listen_admin_msg(message: Message):
+    user_id = re.sub("User ID: ", "", re.split(r"\n", message.reply_to_message.text)[1])
     try:
-        deal_id = re.split("#", re.split("\n", message.reply_to_message.text)[0])[1]
         link = message.text
         res = re.search("(?P<url>https?://[^\s]+)", link)
-        if res: 
+        if res:
             link = res.group("url")
             link_page = (
                 F"🔗Ссылка на оплату: {link}\n"
                 F"❗️Ссылка действует 5 минут."
             )
-            await bot.send_message(chat_id=message.from_user.id, text=link_page, reply_markup=PaymentKB.receipt(deal_id), reply_to_message_id=message.reply_to_message.message_id + 1)
+            await bot.send_message(chat_id=user_id, text=link_page, reply_markup=PaymentKB.receipt(), reply_to_message_id=message.reply_to_message.message_id + 1)
             return await message.answer(text="Ссылка на оплату успешно отправлена.")
         else:
-            await bot.send_message(chat_id=message.from_user.id, text=message.text, reply_to_message_id=message.reply_to_message.message_id + 1)
+            await bot.send_message(chat_id=user_id, text=message.text)
     except IndexError:
-        await bot.send_message(chat_id=message.from_user.id, text=message.text, reply_to_message_id=message.reply_to_message.message_id - 1)
+        await bot.send_message(chat_id=user_id, text=message.text, reply_to_message_id=message.reply_to_message.message_id - 1)
 
 
 #@dp.message_handler(lambda message: message.chat.type == "private")
@@ -123,6 +123,7 @@ async def create_deal(message: Message, state: FSMContext, user, send, receive, 
     await state.update_data(deal_id=deal.id)
     deal_page = (
         F"<b>Новая анкета #{deal.pk}</b>\n"
+        F"<b>User ID:</b> {message.from_user.id}\n"
         F"⚙️Обмен: {S_CURR_COUPLE.get(send)} ➜ {S_CURR_COUPLE.get(receive)}\n"
         F"💳Метод: {method}\n"
         F"💰Сумма: {amount}"
