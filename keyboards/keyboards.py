@@ -74,7 +74,7 @@ class PaymentKB:
         return payment_method
 
     @staticmethod
-    def receipt(deal_id):
+    def receipt():
         receipt_chose = ReplyKeyboardMarkup(
             resize_keyboard=True, keyboard=[[KeyboardButton(text="Прикрепить чек")]]
         )
