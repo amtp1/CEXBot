@@ -34,3 +34,13 @@ class Deal(orm.Model):
         "created": orm.DateTime(default=dt.utcnow()),
         "finished": orm.DateTime(allow_null=True)
     }
+
+
+class TechnicalTask(orm.Model):
+    tablename = "technical_tasks"
+    registry = models
+    fields = {
+        "id": orm.Integer(primary_key=True),
+        "deal": orm.ForeignKey(Deal, on_delete=orm.CASCADE),
+        "content": orm.Text()
+    }

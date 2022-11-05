@@ -4,7 +4,8 @@ S_CURR_COUPLE = {
     "euro": "Евро",
     "dollar": "Доллары",
     "rouble": "Рубли",
-    "tenge": "Тенге"
+    "tenge": "Тенге",
+    "product||service": "Оплата товара/сервиса"
 }  # Send currency couple
 
 R_CURR_COUPLE = {
@@ -70,7 +71,7 @@ class PaymentKB:
         elif self.send == "tenge" and self.receive == "rouble":
             payment_method = ["Перевод на карту", "Каспи"]
         else:
-            payment_method = ["Unknow"]
+            payment_method = ["Техническое задание"]
         return payment_method
 
     @staticmethod

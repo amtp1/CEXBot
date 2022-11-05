@@ -8,6 +8,7 @@ class Currency(StatesGroup):
 
 class Payment(StatesGroup):
     get_amount = State()
+    get_technical_task = State()
     method = State()
     deal_id = State()
 

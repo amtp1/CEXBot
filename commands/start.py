@@ -6,6 +6,7 @@ from models.models import User
 from keyboards.keyboards import StartKB, CurrencyKB
 from utils.order import check_order
 
+
 @dp.message_handler(commands="start", state="*")
 async def start(message: Message, state: FSMContext):
     user_id = message.from_user.id
@@ -19,5 +20,6 @@ async def start(message: Message, state: FSMContext):
 
 
 @dp.message_handler(lambda message: message.text == "СТАРТ", state="*")
-async def exchange(message: Message):
+async def exchange(message: Message, state: FSMContext):
+    await state.finish()  # Finish state
     return await message.answer(text="Приветствую, я бот обменник :) Что вы отправляете?", reply_markup=CurrencyKB.send_keyboard())

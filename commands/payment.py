@@ -17,6 +17,9 @@ from commands import start, attach_receipt
 async def payment(query: CallbackQuery, state: FSMContext):
     payment_method = re.sub("payment_", "", query.data)
     await state.update_data(method=payment_method)
+    if payment_method == "Техническое задание":
+        await query.message.edit_text(text="Напишите техническое задание:")
+        return await state.set_state("get_technical_task")
     await query.message.edit_text(text="Введите сумму:")
     return await state.set_state("get_amount")
 
@@ -34,20 +37,33 @@ async def get_amount(message: Message, state: FSMContext):
     method = data.get("method")
     amount = data.get("amount")
     user = await User.objects.get(user_id=message.from_user.id)
-    deal = Deal.objects.filter(user=user, send=send, receive=receive, method=method, amount=amount)
+    deal = Deal.objects.filter(
+        user=user, send=send, receive=receive, method=method, amount=amount)
     if await deal.exists():
         deal = list(await deal.all())[-1]
         if not deal.is_cancel:
             return await message.answer(text="Такая заявка находится в процессе ...")
         else:
-            await create_deal(message, state, user, send, receive, method, amount)
+            await create_deal(message, state, user, send, receive, method, amount, content=None, is_technical_task=False)
     else:
-        await create_deal(message, state, user, send, receive, method, amount)
+        await create_deal(message, state, user, send, receive, method, amount, content=None, is_technical_task=False)
+
+
+@dp.message_handler(state="get_technical_task")
+async def get_technical_task(message: Message, state: FSMContext, amount=0.0):
+    content = message.text
+    user = await User.objects.get(user_id=message.from_user.id)
+    data = await state.get_data()
+    send = data.get("send")
+    receive = data.get("receive")
+    method = data.get("method")
+    await create_deal(message=message, state=state, user=user, send=send, receive=receive, method=method, amount=amount, is_technical_task=True, content=content)
 
 
 @dp.message_handler(lambda message: message.chat.type == "group")
 async def listen_admin_msg(message: Message):
-    user_id = re.sub("User ID: ", "", re.split(r"\n", message.reply_to_message.text)[1])
+    user_id = re.sub("👤User ID: ", "", re.split(
+        r"\n", message.reply_to_message.text)[1])
     try:
         link = message.text
         res = re.search("(?P<url>https?://[^\s]+)", link)
@@ -65,23 +81,25 @@ async def listen_admin_msg(message: Message):
         await bot.send_message(chat_id=user_id, text=message.text, reply_to_message_id=message.reply_to_message.message_id - 1)
 
 
-#@dp.message_handler(lambda message: message.chat.type == "private")
-#async def listen_private_msg(message: Message):
-#    await bot.send_message(chat_id=config.group_id, text=message.text, reply_to_message_id=message.reply_to_message.message_id - 1)
+@dp.message_handler(lambda message: message.chat.type == "private")
+async def listen_private_msg(message: Message):
+    await bot.send_message(chat_id=config.group_id, text=message.text, reply_to_message_id=message.reply_to_message.message_id - 1)
 
 
 @dp.message_handler(lambda message: message.chat.type == "group", content_types=["photo"])
 async def listen_admin_photo(message: Message, state: FSMContext):
     try:
-        deal_id = re.split("#", re.split("\n", message.reply_to_message.caption)[0])[1]
-        user_id = re.split(":", re.split("\n", message.reply_to_message.caption)[1])[1].replace(" ", "")
+        deal_id = re.split("#", re.split(
+            "\n", message.reply_to_message.caption)[0])[1]
+        user_id = re.split(":", re.split("\n", message.reply_to_message.caption)[1])[
+            1].replace(" ", "")
         path = rf"media/receipt/admins/{message.from_user.id}/deal_{deal_id}.jpg"
         await message.photo[-1].download(path)
         with open(path, "rb") as f:
             photo = f.read()
             f.close()
         await bot.send_photo(chat_id=user_id, photo=photo, caption=f"<b>Чек от администратора. (Анкета #{deal_id})</b>",
-            reply_to_message_id=message.reply_to_message.message_id + 1)
+                             reply_to_message_id=message.reply_to_message.message_id + 1)
         await finish_deal(message, state, deal_id)
         return await message.answer(text="Чек успешно отправлен.")
     except IndexError:
@@ -116,23 +134,32 @@ async def read_user_receipt(message: Message, state: FSMContext):
     return await state.set_state("message")
 
 
-async def create_deal(message: Message, state: FSMContext, user, send, receive, method, amount):
+async def create_deal(message: Message, state: FSMContext, user: User, send: str, receive: str, method: str, amount: float, content: str, is_technical_task: bool):
     await state.finish()
     is_chat = await User.objects.filter(user_id=message.from_user.id).update(is_chat=True)
     deal = await Deal.objects.create(user=user, send=send, receive=receive, method=method, amount=amount)
     await state.update_data(deal_id=deal.id)
-    deal_page = (
-        F"<b>Новая анкета #{deal.pk}</b>\n"
-        F"<b>User ID:</b> {message.from_user.id}\n"
-        F"⚙️Обмен: {S_CURR_COUPLE.get(send)} ➜ {S_CURR_COUPLE.get(receive)}\n"
-        F"💳Метод: {method}\n"
-        F"💰Сумма: {amount}"
-    )
+    if is_technical_task:
+        technical_task = await TechnicalTask.objects.create(deal=deal, content=content)
+        deal_page = (
+            F"📌<b>Новая анкета #{deal.pk}</b>\n"
+            F"👤<b>User ID:</b> {message.from_user.id}\n"
+            F"⚙️Обмен: {S_CURR_COUPLE.get(send)} ➜ {S_CURR_COUPLE.get(receive)}\n"
+            F"💳Метод: {method}\n"
+            F"📃Техническое задание: <code>{content}</code>"
+        )
+    else:
+        deal_page = (
+            F"📌<b>Новая анкета #{deal.pk}</b>\n"
+            F"👤<b>User ID:</b> {message.from_user.id}\n"
+            F"⚙️Обмен: {S_CURR_COUPLE.get(send)} ➜ {S_CURR_COUPLE.get(receive)}\n"
+            F"💳Метод: {method}\n"
+            F"💰Сумма: {amount}"
+        )
     try:
         await bot.send_message(config.group_id, deal_page)
-        await message.answer(text=
-            f"Анкета отправлена. Ожидайте ответа...\n"
-            f"Вы можете задать любой вопрос.")
+        await message.answer(text=f"Анкета отправлена. Ожидайте ответа...\n"
+                             f"Вы можете задать любой вопрос.")
         return await state.set_state("message")
     except BotKicked:
         logger.error(f"Bot kicked from chat: {config.group_id}")
