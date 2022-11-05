@@ -33,7 +33,7 @@ class CurrencyKB:
     def send_keyboard():
         send_choice = InlineKeyboardMarkup(
             inline_keyboard=[[InlineKeyboardButton(
-                text=v, callback_data=f"send_{k}")] for k, v in S_CURR_COUPLE.items()]
+                text=v, callback_data=f"send_{k}")] for k, v in S_CURR_COUPLE.items() if not k == "product||service"]
         )
         return send_choice
 
