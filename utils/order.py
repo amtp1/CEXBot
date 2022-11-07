@@ -1,4 +1,5 @@
 from models.models import User, Deal
+from objects.globals import bot, config
 
 
 async def check_order(message, state):
@@ -10,4 +11,5 @@ async def check_order(message, state):
         if not deal.finished:
             if not deal.is_cancel:
                 await deal.update(is_cancel=True)
-                return await message.answer(text="Предыдущая заявка была отменена!")
+                await bot.send_message(chat_id=config.group_id, text=f"<b>Заявка #{deal.pk}</b> была отменена!")
+                return await message.answer(text=f"Предыдущая <b>заявка #{deal.pk}</b> была отменена!")
