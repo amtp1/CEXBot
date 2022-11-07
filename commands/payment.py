@@ -83,7 +83,15 @@ async def listen_admin_msg(message: Message):
 
 @dp.message_handler(lambda message: message.chat.type == "private")
 async def listen_private_msg(message: Message):
-    await bot.send_message(chat_id=config.group_id, text=message.text, reply_to_message_id=message.reply_to_message.message_id - 1)
+    message_page = (
+        F"<b>ID заявки:</b> без заявки\n"
+        F"<b>👤User ID:</b> {message.from_user.id}\n"
+        f"<b>Сообщение:</b> {message.text}"
+    )
+    try:
+        await bot.send_message(chat_id=config.group_id, text=message_page, reply_to_message_id=message.reply_to_message.message_id - 1)
+    except AttributeError:
+        return await bot.send_message(chat_id=config.group_id, text=message_page)
 
 
 @dp.message_handler(lambda message: message.chat.type == "group", content_types=["photo"])
@@ -181,7 +189,7 @@ async def chat(message: Message, state: FSMContext):
     deal_id = data.get("deal_id")
     message_page = (
         f"<b>ID заявки:</b> {deal_id}\n"
-        F"<b>User ID:</b> {message.from_user.id}\n"
+        F"<b>👤User ID:</b> {message.from_user.id}\n"
         f"<b>Сообщение:</b> {message.text}"
     )
     await bot.send_message(chat_id=config.group_id, text=message_page)
