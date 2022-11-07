@@ -84,9 +84,10 @@ async def listen_admin_msg(message: Message):
 @dp.message_handler(lambda message: message.chat.type == "private")
 async def listen_private_msg(message: Message):
     message_page = (
-        F"<b>ID заявки:</b> без заявки\n"
-        F"<b>👤User ID:</b> {message.from_user.id}\n"
-        f"<b>Сообщение:</b> {message.text}"
+        F"📍<b>ID заявки:</b> без заявки\n"
+        F"👤<b>User ID:</b> {message.from_user.id}\n"
+        F"🔗Username: @{message.from_user.username}\n"
+        f"✉️<b>Сообщение:</b> {message.text}"
     )
     try:
         await bot.send_message(chat_id=config.group_id, text=message_page, reply_to_message_id=message.reply_to_message.message_id - 1)
@@ -99,8 +100,7 @@ async def listen_admin_photo(message: Message, state: FSMContext):
     try:
         deal_id = re.split("#", re.split(
             "\n", message.reply_to_message.caption)[0])[1]
-        user_id = re.split(":", re.split("\n", message.reply_to_message.caption)[1])[
-            1].replace(" ", "")
+        user_id = re.split(":", re.split("\n", message.reply_to_message.caption)[1])[1].replace(" ", "")
         path = rf"media/receipt/admins/{message.from_user.id}/deal_{deal_id}.jpg"
         await message.photo[-1].download(path)
         with open(path, "rb") as f:
@@ -152,6 +152,7 @@ async def create_deal(message: Message, state: FSMContext, user: User, send: str
         deal_page = (
             F"📌<b>Новая анкета #{deal.pk}</b>\n"
             F"👤<b>User ID:</b> {message.from_user.id}\n"
+            F"🔗Username: @{message.from_user.username}\n"
             F"⚙️Обмен: {S_CURR_COUPLE.get(send)} ➜ {S_CURR_COUPLE.get(receive)}\n"
             F"💳Метод: {method}\n"
             F"📃Техническое задание: <code>{content}</code>"
@@ -160,6 +161,7 @@ async def create_deal(message: Message, state: FSMContext, user: User, send: str
         deal_page = (
             F"📌<b>Новая анкета #{deal.pk}</b>\n"
             F"👤<b>User ID:</b> {message.from_user.id}\n"
+            F"🔗Username: @{message.from_user.username}\n"
             F"⚙️Обмен: {S_CURR_COUPLE.get(send)} ➜ {S_CURR_COUPLE.get(receive)}\n"
             F"💳Метод: {method}\n"
             F"💰Сумма: {amount}"
@@ -188,8 +190,9 @@ async def chat(message: Message, state: FSMContext):
     data = await state.get_data()
     deal_id = data.get("deal_id")
     message_page = (
-        f"<b>ID заявки:</b> {deal_id}\n"
-        F"<b>👤User ID:</b> {message.from_user.id}\n"
-        f"<b>Сообщение:</b> {message.text}"
+        f"📍<b>ID заявки:</b> {deal_id}\n"
+        F"👤<b>User ID:</b> {message.from_user.id}\n"
+        F"🔗Username: @{message.from_user.username}\n"
+        f"✉️<b>Сообщение:</b> {message.text}"
     )
     await bot.send_message(chat_id=config.group_id, text=message_page)
