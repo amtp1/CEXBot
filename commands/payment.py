@@ -3,7 +3,7 @@ from datetime import datetime as dt
 
 from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 from aiogram.dispatcher.storage import FSMContext
-from aiogram.utils.exceptions import BotKicked
+from aiogram.utils.exceptions import BotKicked, BadRequest
 from loguru import logger
 
 from objects.globals import dp, config, bot
@@ -61,24 +61,30 @@ async def get_technical_task(message: Message, state: FSMContext, amount=0.0):
 
 
 @dp.message_handler(lambda message: message.chat.type == "group")
-async def listen_admin_msg(message: Message):
-    user_id = re.sub("👤User ID: ", "", re.split(
-        r"\n", message.reply_to_message.text)[1])
-    try:
-        link = message.text
-        res = re.search("(?P<url>https?://[^\s]+)", link)
-        if res:
-            link = res.group("url")
-            link_page = (
-                F"🔗Ссылка на оплату: {link}\n"
-                F"❗️Ссылка действует 5 минут."
-            )
-            await bot.send_message(chat_id=user_id, text=link_page, reply_markup=PaymentKB.receipt(), reply_to_message_id=message.reply_to_message.message_id + 1)
-            return await message.answer(text="Ссылка на оплату успешно отправлена.")
-        else:
-            await bot.send_message(chat_id=user_id, text=message.text)
-    except IndexError:
-        await bot.send_message(chat_id=user_id, text=message.text, reply_to_message_id=message.reply_to_message.message_id - 1)
+async def listen_admin_msg(message: Message, user_id = None):
+    message_split = re.split(r"\n", message.reply_to_message.text)
+    if len(message_split) > 1:
+        user_id = re.sub("👤User ID: ", "", message_split[1])
+    if user_id:
+        try:
+            try:
+                if "!pay" in message.text:
+                    link = message.text
+                    res = re.search("(?P<url>https?://[^\s]+)", link)
+                    if res:
+                        link = res.group("url")
+                        link_page = (
+                            F"🔗Ссылка на оплату: {link}\n"
+                            F"❗️Ссылка действует 5 минут."
+                        )
+                        await bot.send_message(chat_id=user_id, text=link_page, reply_markup=PaymentKB.receipt())
+                        return await message.answer(text="Ссылка на оплату успешно отправлена.")
+                else:
+                    await bot.send_message(chat_id=user_id, text=message.text)
+            except BadRequest as e:
+                logger.error(e)
+        except IndexError:
+            await bot.send_message(chat_id=user_id, text=message.text, reply_to_message_id=message.reply_to_message.message_id - 1)
 
 
 @dp.message_handler(lambda message: message.chat.type == "private")
