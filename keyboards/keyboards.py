@@ -1,4 +1,7 @@
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import (InlineKeyboardMarkup, InlineKeyboardButton,
+                           ReplyKeyboardMarkup, KeyboardButton)
+
+from objects.globals import config
 
 S_CURR_COUPLE = {
     "euro": "Евро",
@@ -23,6 +26,13 @@ class StartKB:
             resize_keyboard=True, keyboard=[[KeyboardButton(text="СТАРТ")]]
         )
         return start_choice
+
+    @staticmethod
+    def subscribe_keyboard():
+        subscribe_choice = InlineKeyboardMarkup(
+            inline_keyboard=[[InlineKeyboardButton(text="Перейти", url=config.sub_group_url)]]
+        )
+        return subscribe_choice
 
 
 class CurrencyKB:
