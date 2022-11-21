@@ -14,5 +14,7 @@ class Config:
         self._set()
 
     def _set(self):
-        self.token = os.getenv("BOT_TOKEN")
-        self.group_id = os.getenv("GROUP_ID")
+        self.token = os.getenv('BOT_TOKEN')
+        self.main_group_id = os.getenv('MAIN_GROUP_ID')
+        self.sub_group_id = os.getenv('SUB_GROUP_ID')
+        self.sub_group_url = os.getenv('SUB_GROUP_URL')
