@@ -11,5 +11,5 @@ async def check_order(message, state):
         if not deal.finished:
             if not deal.is_cancel:
                 await deal.update(is_cancel=True)
-                await bot.send_message(chat_id=config.group_id, text=f"<b>Заявка #{deal.pk}</b> была отменена!")
+                await bot.send_message(chat_id=config.main_group_id, text=f"<b>Заявка #{deal.pk}</b> была отменена!")
                 return await message.answer(text=f"Предыдущая <b>заявка #{deal.pk}</b> была отменена!")

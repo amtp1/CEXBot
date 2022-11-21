@@ -60,7 +60,7 @@ async def get_technical_task(message: Message, state: FSMContext, amount=0.0):
     await create_deal(message=message, state=state, user=user, send=send, receive=receive, method=method, amount=amount, is_technical_task=True, content=content)
 
 
-@dp.message_handler(lambda message: message.chat.type == "group")
+@dp.message_handler(lambda message: message.chat.type == "supergroup")
 async def listen_admin_msg(message: Message, user_id = None):
     message_split = re.split(r"\n", message.reply_to_message.text)
     if len(message_split) > 1:
@@ -96,9 +96,9 @@ async def listen_private_msg(message: Message):
         f"✉️<b>Сообщение:</b> {message.text}"
     )
     try:
-        await bot.send_message(chat_id=config.group_id, text=message_page, reply_to_message_id=message.reply_to_message.message_id - 1)
+        await bot.send_message(chat_id=config.main_group_id, text=message_page, reply_to_message_id=message.reply_to_message.message_id - 1)
     except AttributeError:
-        return await bot.send_message(chat_id=config.group_id, text=message_page)
+        return await bot.send_message(chat_id=config.main_group_id, text=message_page)
 
 
 @dp.message_handler(lambda message: message.chat.type == "group", content_types=["photo"])
@@ -143,7 +143,7 @@ async def read_user_receipt(message: Message, state: FSMContext):
         f"<b>Чек анкеты #{deal_id}</b>\n"
         f"<b>ID пользователя: {message.from_user.id}</b>"
     )
-    await bot.send_photo(chat_id=config.group_id, photo=photo, caption=photo_caption)
+    await bot.send_photo(chat_id=config.main_group_id, photo=photo, caption=photo_caption)
     await message.answer(text="Ожидайте чек от администратора ...")
     return await state.set_state("message")
 
@@ -173,12 +173,12 @@ async def create_deal(message: Message, state: FSMContext, user: User, send: str
             F"💰Сумма: {amount}"
         )
     try:
-        await bot.send_message(config.group_id, deal_page)
+        await bot.send_message(config.main_group_id, deal_page)
         await message.answer(text=f"Анкета отправлена. Ожидайте ответа...\n"
                              f"Вы можете задать любой вопрос.")
         return await state.set_state("message")
     except BotKicked:
-        logger.error(f"Bot kicked from chat: {config.group_id}")
+        logger.error(f"Bot kicked from chat: {config.main_group_id}")
         return await message.answer(text="При отправке возникла ошибка. Дождитесь её исправления ...")
 
 
@@ -201,4 +201,4 @@ async def chat(message: Message, state: FSMContext):
         F"🔗Username: @{message.from_user.username}\n"
         f"✉️<b>Сообщение:</b> {message.text}"
     )
-    await bot.send_message(chat_id=config.group_id, text=message_page)
+    await bot.send_message(chat_id=config.main_group_id, text=message_page)
