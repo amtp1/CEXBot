@@ -1,7 +1,7 @@
 import re
 from datetime import datetime as dt
 
-from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
+from aiogram.types import CallbackQuery, Message
 from aiogram.dispatcher.storage import FSMContext
 from aiogram.utils.exceptions import BotKicked, BadRequest
 from loguru import logger
