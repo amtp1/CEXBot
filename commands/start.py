@@ -1,5 +1,4 @@
 from aiogram.types import Message
-from aiogram.utils.exceptions import ChatNotFound
 from aiogram.dispatcher.storage import FSMContext
 
 from objects.globals import dp
@@ -21,7 +20,8 @@ async def start(message: Message, state: FSMContext):
                                       first_name=message.from_user.first_name, last_name=message.from_user.last_name)
         else:
             await check_order(message, state)
-        start_page = "Привет! Я бот - обменник. Помогу сделать перевод, обмен валют и/или оплатить сервис зарубежом и/или в России, минуя все ограничения!"
+        start_page = ("Привет! Я бот - обменник. Помогу сделать перевод, обмен валют и/или оплатить сервис зарубежом "
+                      "и/или в России, минуя все ограничения!")
         return await message.answer(text=start_page, reply_markup=StartKB.start_keyboard())
 
 
