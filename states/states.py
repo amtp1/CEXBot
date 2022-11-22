@@ -21,5 +21,9 @@ class Receipt(StatesGroup):
     get_receipt = State()
 
 
+class Receive(StatesGroup):
+    receive = State()
+
+
 class Chat(StatesGroup):
     message = State()

@@ -41,7 +41,7 @@ async def get_amount(message: Message, state: FSMContext):
         user=user, send=send, receive=receive, method=method, amount=amount)
     if await deal.exists():
         deal = list(await deal.all())[-1]
-        if not deal.is_cancel:
+        if not deal.finished and not deal.is_cancel:
             return await message.answer(text="Такая заявка находится в процессе ...")
         else:
             await create_deal(message, state, user, send, receive, method, amount, content=None,
@@ -63,7 +63,7 @@ async def get_technical_task(message: Message, state: FSMContext, amount=0.0):
 
 
 @dp.message_handler(lambda message: message.chat.type == "supergroup")
-async def listen_admin_msg(message: Message, user_id = None):
+async def listen_admin_msg(message: Message, user_id=None):
     message_split = re.split(r"\n", message.reply_to_message.text)
     if len(message_split) > 1:
         user_id = re.sub("👤User ID: ", "", message_split[1])
@@ -105,7 +105,7 @@ async def listen_private_msg(message: Message):
         return await bot.send_message(chat_id=config.main_group_id, text=message_page)
 
 
-@dp.message_handler(lambda message: message.chat.type == "group", content_types=["photo"])
+@dp.message_handler(lambda message: message.chat.type == "supergroup", content_types=["photo"])
 async def listen_admin_photo(message: Message, state: FSMContext):
     try:
         deal_id = re.split("#", re.split(
@@ -116,14 +116,13 @@ async def listen_admin_photo(message: Message, state: FSMContext):
         with open(path, "rb") as f:
             photo = f.read()
             f.close()
-        await bot.send_photo(chat_id=user_id, photo=photo, caption=f"<b>Чек от администратора. (Анкета #{deal_id})</b>",
-                             reply_to_message_id=message.reply_to_message.message_id + 1)
+        await bot.send_photo(chat_id=user_id, photo=photo, caption=f"<b>Чек от администратора. (Анкета #{deal_id})</b>")
         await finish_deal(message, state, deal_id)
         return await message.answer(text="Чек успешно отправлен.")
     except IndexError:
         return await message.answer(text="На это сообщение нельзя ответчать!")
     except TypeError:
-        return await message.answer(text="Нужно прикрепить ссылку!")
+        return await message.answer(text="Некорректный формат!")
 
 
 @dp.callback_query_handler(lambda query: query.data.startswith(("receipt")))
@@ -134,7 +133,7 @@ async def get_receipt(query: CallbackQuery, state: FSMContext):
     return await state.set_state("get_receipt")
 
 
-@dp.message_handler(content_types=["photo"], state="get_receipt")
+@dp.message_handler(state="get_receipt", content_types=["photo"])
 async def read_user_receipt(message: Message, state: FSMContext):
     data = await state.get_data()
     deal_id = data.get("deal_id")
@@ -148,8 +147,37 @@ async def read_user_receipt(message: Message, state: FSMContext):
         f"<b>ID пользователя: {message.from_user.id}</b>"
     )
     await bot.send_photo(chat_id=config.main_group_id, photo=photo, caption=photo_caption)
-    await message.answer(text="Ожидайте чек от администратора ...")
+    await message.answer(text="Куда вам отправить?")
+    return await state.set_state("receive")
+
+
+@dp.message_handler(state="receive")
+async def read_user_receive(message: Message, state: FSMContext):
+    data = await state.get_data()
+    deal_id = data.get("deal_id")
+    message_page = (
+        f"📍<b>ID заявки:</b> {deal_id}\n"
+        F"👤<b>User ID:</b> {message.from_user.id}\n"
+        F"🔗Username: @{message.from_user.username}\n"
+        f"✉️<b>Куда отправить:</b> {message.text}"
+    )
+    await bot.send_message(chat_id=config.main_group_id, text=message_page)
+    await message.answer(text="Ожидайте чек от администратора ...\n"
+                         "Вы можете задать любой вопрос.")
     return await state.set_state("message")
+
+
+@dp.message_handler(state="message")
+async def chat(message: Message, state: FSMContext):
+    data = await state.get_data()
+    deal_id = data.get("deal_id")
+    message_page = (
+        f"📍<b>ID заявки:</b> {deal_id}\n"
+        F"👤<b>User ID:</b> {message.from_user.id}\n"
+        F"🔗Username: @{message.from_user.username}\n"
+        f"✉️<b>Сообщение:</b> {message.text}"
+    )
+    await bot.send_message(chat_id=config.main_group_id, text=message_page)
 
 
 async def create_deal(message: Message, state: FSMContext, user: User, send: str,
@@ -195,16 +223,3 @@ async def finish_deal(message: Message, state: FSMContext, deal_id):
     await deal.update(finished=dt.utcnow())
     await bot.send_message(chat_id=message.from_user.id, text="Заявка успешно завершена!",
                            reply_markup=StartKB.start_keyboard())
-
-
-@dp.message_handler(state="message")
-async def chat(message: Message, state: FSMContext):
-    data = await state.get_data()
-    deal_id = data.get("deal_id")
-    message_page = (
-        f"📍<b>ID заявки:</b> {deal_id}\n"
-        F"👤<b>User ID:</b> {message.from_user.id}\n"
-        F"🔗Username: @{message.from_user.username}\n"
-        f"✉️<b>Сообщение:</b> {message.text}"
-    )
-    await bot.send_message(chat_id=config.main_group_id, text=message_page)
