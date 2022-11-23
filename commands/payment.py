@@ -42,7 +42,8 @@ async def get_amount(message: Message, state: FSMContext):
     if await deal.exists():
         deal = list(await deal.all())[-1]
         if not deal.finished and not deal.is_cancel:
-            return await message.answer(text="Такая заявка находится в процессе ...")
+            return await message.answer(text="Такая заявка находится в процессе ...\n"
+                                        "Нажмите на команду /start для отмены заявки.")
         else:
             await create_deal(message, state, user, send, receive, method, amount, content=None,
                               is_technical_task=False)
@@ -62,7 +63,7 @@ async def get_technical_task(message: Message, state: FSMContext, amount=0.0):
                       method=method, amount=amount, is_technical_task=True, content=content)
 
 
-@dp.message_handler(lambda message: message.chat.type == "supergroup")
+@dp.message_handler(lambda message: message.chat.type in ("group", "supergroup",))
 async def listen_admin_msg(message: Message, user_id=None):
     message_split = re.split(r"\n", message.reply_to_message.text)
     if len(message_split) > 1:
@@ -105,7 +106,7 @@ async def listen_private_msg(message: Message):
         return await bot.send_message(chat_id=config.main_group_id, text=message_page)
 
 
-@dp.message_handler(lambda message: message.chat.type == "supergroup", content_types=["photo"])
+@dp.message_handler(lambda message: message.chat.type in ("group", "supergroup",), content_types=["photo"])
 async def listen_admin_photo(message: Message, state: FSMContext):
     try:
         deal_id = re.split("#", re.split(
