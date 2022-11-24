@@ -11,4 +11,5 @@ from keyboards.keyboards import CurrencyKB
 async def send(query: CallbackQuery, state: FSMContext):
     currency = re.sub("send_", "", query.data)
     await state.update_data(send=currency)
-    return await query.message.edit_text(text="Что вы получаете?", reply_markup=CurrencyKB(currency=currency).receive_keyboard())
+    return await query.message.edit_text(text="Что вы получаете?",
+                                         reply_markup=CurrencyKB(currency=currency).receive_keyboard())
