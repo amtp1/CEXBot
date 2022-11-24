@@ -10,6 +10,7 @@ from objects.globals import dp, config, bot
 from keyboards.keyboards import S_CURR_COUPLE, PaymentKB, StartKB
 from models.models import *
 from utils.converter import is_int
+from utils.deal import get_deal
 from commands import start, attach_receipt
 
 
@@ -136,15 +137,14 @@ async def get_receipt(query: CallbackQuery, state: FSMContext):
 
 @dp.message_handler(state="get_receipt", content_types=["photo"])
 async def read_user_receipt(message: Message, state: FSMContext):
-    data = await state.get_data()
-    deal_id = data.get("deal_id")
-    path = rf"media/receipt/users/{message.from_user.id}/deal_{deal_id}.jpg"
+    deal = await get_deal(message.from_user.id)
+    path = rf"media/receipt/users/{message.from_user.id}/deal_{deal.id}.jpg"
     await message.photo[-1].download(path)
     with open(path, "rb") as f:
         photo = f.read()
         f.close()
     photo_caption = (
-        f"<b>Чек анкеты #{deal_id}</b>\n"
+        f"<b>Чек анкеты #{deal.id}</b>\n"
         f"<b>ID пользователя: {message.from_user.id}</b>"
     )
     await bot.send_photo(chat_id=config.main_group_id, photo=photo, caption=photo_caption)
@@ -209,7 +209,7 @@ async def create_deal(message: Message, state: FSMContext, user: User, send: str
     try:
         await bot.send_message(config.main_group_id, deal_page)
         await message.answer(text="Анкета отправлена. Ожидайте ответа...\n"
-                             "Вы можете задать любой вопрос.")
+                             "Вы можете задать любой вопрос.", reply_markup=PaymentKB.receipt())
         return await state.set_state("message")
     except BotKicked:
         logger.error(f"Bot kicked from chat: {config.main_group_id}")
