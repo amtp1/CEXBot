@@ -93,19 +93,30 @@ async def listen_private_msg(message: Message):
         return await bot.send_message(chat_id=config.main_group_id, text=message_page)
 
 
-@dp.message_handler(lambda message: message.chat.type in ("group", "supergroup",), content_types=["photo"])
+@dp.message_handler(lambda message: message.chat.type in ("group", "supergroup",), content_types=["photo", "document"])
 async def listen_admin_photo(message: Message, state: FSMContext):
     try:
         deal_id = re.split("#", re.split(
             "\n", message.reply_to_message.caption)[0])[1]
         user_id = re.split(":", re.split("\n", message.reply_to_message.caption)[1])[1].replace(" ", "")
-        path = rf"media/receipt/admins/{message.from_user.id}/deal_{deal_id}.jpg"
-        await message.photo[-1].download(path)
-        with open(path, "rb") as f:
-            photo = f.read()
-            f.close()
-        await bot.send_photo(chat_id=user_id, photo=photo, caption=f"<b>Чек от администратора. (Заявка #{deal_id})</b>")
-        return await finish_deal(message, state, deal_id)
+        deal = await Deal.objects.get(id=deal_id)
+        if deal:
+            caption = f"<b>Чек от администратора. (Заявка #{deal_id})</b>"
+            file_id = message.document.file_id
+            file = await bot.get_file(file_id)
+            file_path = file.file_path
+            unique_id = message.document.file_unique_id
+            ext = message.document.mime_type.split("/")[1]
+            local_path = rf"media/receipt/users/{message.from_user.id}/{unique_id}.{ext}"
+            await bot.download_file(file_path, local_path)
+            document = read_local_file(local_path)
+            if message.document.mime_type == "application/pdf":
+                await bot.send_document(chat_id=user_id, document=document, caption=caption)
+            elif message.document.mime_type in ["image/png", "image/jpeg"]:
+                await bot.send_photo(chat_id=user_id, photo=document, caption=caption)
+            await File.objects.create(deal=deal, title=unique_id, path=file_path, type=message.document.mime_type,
+                                      is_member=False)
+            return await finish_deal(message, state, deal_id)
     except IndexError:
         return await message.answer(text="На это сообщение нельзя ответчать!")
     except TypeError:
@@ -132,14 +143,17 @@ async def read_user_receipt(message: Message, state: FSMContext):
         file_id = message.document.file_id
         file = await bot.get_file(file_id)
         file_path = file.file_path
+        unique_id = message.document.file_unique_id
         ext = message.document.mime_type.split("/")[1]
-        local_path = rf"media/receipt/users/{message.from_user.id}/{message.document.file_unique_id}.{ext}"
+        local_path = rf"media/receipt/users/{message.from_user.id}/{unique_id}.{ext}"
         await bot.download_file(file_path, local_path)
         document = read_local_file(local_path)
         if message.document.mime_type == "application/pdf":
             await bot.send_document(chat_id=config.main_group_id, document=document, caption=caption)
         elif message.document.mime_type in ["image/png", "image/jpeg"]:
             await bot.send_photo(chat_id=config.main_group_id, photo=document, caption=caption)
+        await File.objects.create(deal=deal, title=unique_id, path=file_path, type=message.document.mime_type,
+                                  is_member=True)
         await message.answer(text="Куда вам отправить?")
         return await state.set_state("receive")
 
@@ -213,8 +227,17 @@ async def finish_deal(message: Message, state: FSMContext, deal_id):
     user = await User.objects.get(user_id=message.from_user.id)
     await user.update(is_chat=False)
     deal = await Deal.objects.get(id=deal_id)
-    await deal.update(finished=dt.utcnow())
-    await bot.send_message(chat_id=config.main_group_id, text="Чек успешно отправлен.\n"
-                                                              f"Заявка <b>#{deal.id}</b> успешно завершена!")
-    return await bot.send_message(chat_id=message.from_user.id, text=f"Заявка #{deal.id} успешно завершена!",
+    if not deal.finished:
+        await deal.update(finished=dt.utcnow())
+        user_text = f"Заявка #{deal.id} успешно завершена!"
+        group_text = (
+            "Чек успешно отправлен.\n"
+            f"Заявка <b>#{deal.id}</b> успешно завершена!"
+        )
+    else:
+        user_text = f"Дополнение к заявке #{deal.id}!"
+        group_text = f"Дополнение к заявке #{deal.id}!"
+
+    await bot.send_message(chat_id=config.main_group_id, text=group_text)
+    return await bot.send_message(chat_id=message.from_user.id, text=user_text,
                                   reply_markup=StartKB.start_keyboard())
