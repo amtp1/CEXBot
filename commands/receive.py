@@ -12,4 +12,5 @@ async def receive(query: CallbackQuery, state: FSMContext):
     currency = re.sub("receive_", "", query.data)
     await state.update_data(receive=currency)
     data = await state.get_data()
-    return await query.message.edit_text(text="Варианты приема валюты", reply_markup=PaymentKB(data).payment_keyboard())
+    return await query.message.edit_text(text="Как вам удобнее отправить валюту?",
+                                         reply_markup=PaymentKB(data).payment_keyboard())
