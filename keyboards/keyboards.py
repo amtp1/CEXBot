@@ -63,6 +63,8 @@ class PaymentKB:
             self.receive = data.get("receive")
 
     def payment_keyboard(self):
+        """Create payment method to InlineKeyboardMarkup"""
+
         payment_choice = InlineKeyboardMarkup(
             inline_keyboard=[[InlineKeyboardButton(
                 text=m, callback_data=f"payment_{m}")] for m in self.payment_method()]
@@ -70,16 +72,18 @@ class PaymentKB:
         return payment_choice
 
     def payment_method(self):
+        """Check payment method"""
+
         if self.send == "euro" and self.receive == "rouble":
             payment_method = ["Revolut", "PayPal",
-                              "TransferWise", "Instant Iban"]
+                              "TransferWise", "Instant Iban", "Не знаю"]
         elif self.send == "dollar" and self.receive == "rouble":
             payment_method = ["Revolut", "PayPal",
-                              "TransferWise", "Inside US Transfers"]
+                              "TransferWise", "Inside US Transfers", "Не знаю"]
         elif self.send == "rouble" and self.receive in ["euro", "dollar", "tenge"]:
-            payment_method = ["Номер карты", "СБП Тинькофф", "Сбер", "Альфа"]
+            payment_method = ["Номер карты", "СБП Тинькофф", "Сбер", "Альфа", "Не знаю"]
         elif self.send == "tenge" and self.receive == "rouble":
-            payment_method = ["Перевод на карту", "Каспи"]
+            payment_method = ["Перевод на карту", "Каспи", "Не знаю"]
         else:
             payment_method = ["Техническое задание"]
         return payment_method
