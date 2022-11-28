@@ -44,3 +44,17 @@ class TechnicalTask(orm.Model):
         "deal": orm.ForeignKey(Deal, on_delete=orm.CASCADE),
         "content": orm.Text()
     }
+
+
+class File(orm.Model):
+    tablename = "files"
+    registry = models
+    fields = {
+        "id": orm.Integer(primary_key=True),
+        "deal": orm.ForeignKey(Deal, on_delete=orm.CASCADE),
+        "title": orm.String(max_length=255),
+        "path": orm.String(max_length=255),
+        "type": orm.String(max_length=128),
+        "is_member": orm.Boolean(),
+        "created": orm.DateTime(default=dt.utcnow())
+    }
