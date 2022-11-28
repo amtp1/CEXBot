@@ -18,6 +18,11 @@ R_CURR_COUPLE = {
     "tenge": {"rouble": "Рубли", "product||service": "Оплата товара/сервиса"}
 }  # Receive currency couple
 
+PAYMENT_METHODS = [
+    "Revolut", "PayPal", "TransferWise", "Instant Iban", "Inside US Transfers", "Номер карты",
+    "СБП Тинькофф", "Сбер", "Альфа", "Перевод на карту", "Каспи"
+]
+
 
 class StartKB:
     @staticmethod
@@ -62,16 +67,23 @@ class PaymentKB:
             self.send = data.get("send")
             self.receive = data.get("receive")
 
-    def payment_keyboard(self):
+    def send_payment_keyboard(self):
         """Create payment method to InlineKeyboardMarkup"""
 
         payment_choice = InlineKeyboardMarkup(
             inline_keyboard=[[InlineKeyboardButton(
-                text=m, callback_data=f"payment_{m}")] for m in self.payment_method()]
+                text=m, callback_data=f"s_payment_{m}")] for m in self.send_payment_method()]
         )
         return payment_choice
 
-    def payment_method(self):
+    def receive_payment_keyboard(self):
+        payment_choice = InlineKeyboardMarkup(
+            inline_keyboard=[[InlineKeyboardButton(
+                text=m, callback_data=f"r_payment_{m}")] for m in self.receive_payment_method()]
+        )
+        return payment_choice
+
+    def send_payment_method(self):
         """Check payment method"""
 
         if self.send == "euro" and self.receive == "rouble":
@@ -87,6 +99,12 @@ class PaymentKB:
         else:
             payment_method = ["Техническое задание"]
         return payment_method
+
+    def receive_payment_method(self):
+        payment_methods = PAYMENT_METHODS[:]
+        send_payment_method = self.send_payment_method()[:-1]
+        [payment_methods.remove(m) for m in send_payment_method]
+        return payment_methods
 
     @staticmethod
     def receipt():

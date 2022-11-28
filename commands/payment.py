@@ -15,15 +15,32 @@ from utils.file import read_local_file
 from commands import start, attach_receipt
 
 
-@dp.callback_query_handler(lambda query: query.data.startswith(("payment")))
-async def payment(query: CallbackQuery, state: FSMContext):
-    payment_method = re.sub("payment_", "", query.data)
+@dp.callback_query_handler(lambda query: query.data.startswith(("s_payment")))
+async def s_payment(query: CallbackQuery, state: FSMContext):
+    payment_method = re.sub("s_payment_", "", query.data)
     await state.update_data(method=payment_method)
     if payment_method == "Техническое задание":
         await query.message.edit_text(text="Напишите техническое задание:")
         return await state.set_state("get_technical_task")
     await query.message.edit_text(text="Введите сумму:")
     return await state.set_state("get_amount")
+
+
+@dp.callback_query_handler(lambda query: query.data.startswith(("r_payment")))
+async def r_payment(query: CallbackQuery, state: FSMContext):
+    payment_method = re.sub("r_payment_", "", query.data)
+    data = await state.get_data()
+    deal_id = data.get("deal_id")
+    message_page = (
+        f"📍<b>ID заявки:</b> {deal_id}\n"
+        F"👤<b>User ID:</b> {query.from_user.id}\n"
+        F"🔗Username: @{query.from_user.username}\n"
+        f"✉️<b>Куда отправить:</b> {payment_method}"
+    )
+    await bot.send_message(chat_id=config.main_group_id, text=message_page)
+    await query.message.answer(text="Ожидайте чек от администратора ...\n"
+                               "Вы можете задать любой вопрос.")
+    return await state.set_state("message")
 
 
 @dp.message_handler(state="get_amount")
@@ -102,19 +119,25 @@ async def listen_admin_photo(message: Message, state: FSMContext):
         deal = await Deal.objects.get(id=deal_id)
         if deal:
             caption = f"<b>Чек от администратора. (Заявка #{deal_id})</b>"
-            file_id = message.document.file_id
+            if message.photo:
+                file_id = message.photo[1].file_id
+                unique_id = message.photo[1].file_unique_id
+                mime_type = "image/png;image/jpeg"
+            else:
+                file_id = message.document.file_id
+                unique_id = message.document.file_unique_id
+                mime_type = message.document.mime_type
             file = await bot.get_file(file_id)
             file_path = file.file_path
-            unique_id = message.document.file_unique_id
-            ext = message.document.mime_type.split("/")[1]
-            local_path = rf"media/receipt/users/{message.from_user.id}/{unique_id}.{ext}"
+            ext = mime_type.split("/")[1]
+            local_path = rf"media/receipt/admins/{message.from_user.id}/{unique_id}.{ext}"
             await bot.download_file(file_path, local_path)
             document = read_local_file(local_path)
-            if message.document.mime_type == "application/pdf":
+            if mime_type == "application/pdf":
                 await bot.send_document(chat_id=user_id, document=document, caption=caption)
-            elif message.document.mime_type in ["image/png", "image/jpeg"]:
+            elif mime_type in ["image/png", "image/jpeg", "image/png;image/jpeg"]:
                 await bot.send_photo(chat_id=user_id, photo=document, caption=caption)
-            await File.objects.create(deal=deal, title=unique_id, path=file_path, type=message.document.mime_type,
+            await File.objects.create(deal=deal, title=unique_id, path=file_path, type=mime_type,
                                       is_member=False)
             return await finish_deal(message, state, deal_id)
     except IndexError:
@@ -135,28 +158,35 @@ async def get_receipt(query: CallbackQuery, state: FSMContext):
 async def read_user_receipt(message: Message, state: FSMContext):
     deal = await get_deal(message.from_user.id)
     if deal:
+        data = await state.get_data()
         caption = (
             f"<b>Чек анкеты #{deal.id}</b>\n"
             f"<b>ID пользователя:</b> {message.from_user.id}\n\n"
             f"<b>❗️Подсказка</b>: <i>Ответный чек отправляйте ответным к этому сообщению</i>"
         )
-        file_id = message.document.file_id
+        if message.photo:
+            file_id = message.photo[1].file_id
+            unique_id = message.photo[1].file_unique_id
+            mime_type = "image/png;image/jpeg"
+        else:
+            file_id = message.document.file_id
+            unique_id = message.document.file_unique_id
+            mime_type = message.document.mime_type
         file = await bot.get_file(file_id)
         file_path = file.file_path
-        unique_id = message.document.file_unique_id
-        ext = message.document.mime_type.split("/")[1]
+        ext = mime_type.split("/")[1]
         local_path = rf"media/receipt/users/{message.from_user.id}/{unique_id}.{ext}"
         await bot.download_file(file_path, local_path)
         document = read_local_file(local_path)
-        if message.document.mime_type == "application/pdf":
+        if mime_type == "application/pdf":
             await bot.send_document(chat_id=config.main_group_id, document=document, caption=caption)
-        elif message.document.mime_type in ["image/png", "image/jpeg"]:
+        elif mime_type in ["image/png", "image/jpeg", "image/png;image/jpeg"]:
             await bot.send_photo(chat_id=config.main_group_id, photo=document, caption=caption)
-        await File.objects.create(deal=deal, title=unique_id, path=file_path, type=message.document.mime_type,
+        await File.objects.create(deal=deal, title=unique_id, path=file_path, type=mime_type,
                                   is_member=True)
-        await message.answer(text="Куда вам отправить?")
-        return await state.set_state("receive")
-
+        await message.answer(text="Куда вам отправить?", reply_markup=PaymentKB(data).receive_payment_keyboard())
+        # return await state.set_state("receive")
+        return await state.reset_state(with_data=False)
 
 @dp.message_handler(state="receive")
 async def read_user_receive(message: Message, state: FSMContext):
@@ -189,7 +219,7 @@ async def chat(message: Message, state: FSMContext):
 
 async def create_deal(message: Message, state: FSMContext, user: User, send: str,
                       receive: str, method: str, amount: float, content: str, is_technical_task: bool):
-    await state.finish()
+    await state.reset_state(with_data=False)
     await User.objects.filter(user_id=message.from_user.id).update(is_chat=True)
     deal = await Deal.objects.create(user=user, send=send, receive=receive, method=method, amount=amount)
     await state.update_data(deal_id=deal.id)
