@@ -169,11 +169,11 @@ async def chat(message: Message, state: FSMContext):
 async def create_deal(message: Message, state: FSMContext, user: User, send: str,
                       receive: str, method: str, amount: float, content: str, is_technical_task: bool):
     await state.finish()
-    is_chat = await User.objects.filter(user_id=message.from_user.id).update(is_chat=True)
+    await User.objects.filter(user_id=message.from_user.id).update(is_chat=True)
     deal = await Deal.objects.create(user=user, send=send, receive=receive, method=method, amount=amount)
     await state.update_data(deal_id=deal.id)
     if is_technical_task:
-        technical_task = await TechnicalTask.objects.create(deal=deal, content=content)
+        await TechnicalTask.objects.create(deal=deal, content=content)
         deal_page = (
             F"📌<b>Новая заявка #{deal.pk}</b>\n"
             F"👤<b>User ID:</b> {message.from_user.id}\n"
