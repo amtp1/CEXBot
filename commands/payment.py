@@ -11,6 +11,7 @@ from keyboards.keyboards import S_CURR_COUPLE, PaymentKB, StartKB
 from models.models import *
 from utils.converter import is_int
 from utils.deal import get_deal
+from utils.file import read_local_file
 from commands import start, attach_receipt
 
 
@@ -119,22 +120,28 @@ async def get_receipt(query: CallbackQuery, state: FSMContext):
     return await state.set_state("get_receipt")
 
 
-@dp.message_handler(state="get_receipt", content_types=["photo"])
+@dp.message_handler(state="get_receipt", content_types=["photo", "document"])
 async def read_user_receipt(message: Message, state: FSMContext):
     deal = await get_deal(message.from_user.id)
-    path = rf"media/receipt/users/{message.from_user.id}/deal_{deal.id}.jpg"
-    await message.photo[-1].download(path)
-    with open(path, "rb") as f:
-        photo = f.read()
-        f.close()
-    photo_caption = (
-        f"<b>Чек анкеты #{deal.id}</b>\n"
-        f"<b>ID пользователя:</b> {message.from_user.id}\n\n"
-        f"<b>❗️Подсказка</b>: <i>Ответный чек отправляйте ответным к этому сообщению</i>"
-    )
-    await bot.send_photo(chat_id=config.main_group_id, photo=photo, caption=photo_caption)
-    await message.answer(text="Куда вам отправить?")
-    return await state.set_state("receive")
+    if deal:
+        caption = (
+            f"<b>Чек анкеты #{deal.id}</b>\n"
+            f"<b>ID пользователя:</b> {message.from_user.id}\n\n"
+            f"<b>❗️Подсказка</b>: <i>Ответный чек отправляйте ответным к этому сообщению</i>"
+        )
+        file_id = message.document.file_id
+        file = await bot.get_file(file_id)
+        file_path = file.file_path
+        ext = message.document.mime_type.split("/")[1]
+        local_path = rf"media/receipt/users/{message.from_user.id}/{message.document.file_unique_id}.{ext}"
+        await bot.download_file(file_path, local_path)
+        document = read_local_file(local_path)
+        if message.document.mime_type == "application/pdf":
+            await bot.send_document(chat_id=config.main_group_id, document=document, caption=caption)
+        elif message.document.mime_type in ["image/png", "image/jpeg"]:
+            await bot.send_photo(chat_id=config.main_group_id, photo=document, caption=caption)
+        await message.answer(text="Куда вам отправить?")
+        return await state.set_state("receive")
 
 
 @dp.message_handler(state="receive")
