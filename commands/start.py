@@ -23,6 +23,8 @@ async def start(message: Message, state: FSMContext):
         start_page = ("Привет! Я бот - обменник. Помогу сделать перевод, обмен валют и/или оплатить сервис зарубежом "
                       "и/или в России, минуя все ограничения!")
         return await message.answer(text=start_page, reply_markup=StartKB.start_keyboard())
+    else:
+        return await state.finish()
 
 
 @dp.message_handler(lambda message: message.text == "СТАРТ", state="*")
@@ -32,3 +34,5 @@ async def exchange(message: Message, state: FSMContext):
         await state.finish()  # Finish state
         return await message.answer(text="Приветствую, я бот обменник :) Что вы отправляете?",
                                     reply_markup=CurrencyKB.send_keyboard())
+    else:
+        return await state.finish()
