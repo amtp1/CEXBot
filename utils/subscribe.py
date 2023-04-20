@@ -33,7 +33,7 @@ async def check_subscribe_cb(query: CallbackQuery, state: FSMContext):
             await User.objects.create(user_id=query.from_user.id, username=query.from_user.username,
                                       first_name=query.from_user.first_name, last_name=query.from_user.last_name)
         else:
-            await check_order(query.message, state)
+            await check_order(query, state)
         start_page = ("Привет! Я бот - обменник. Помогу сделать перевод, обмен валют и/или оплатить сервис зарубежом "
                       "и/или в России, минуя все ограничения!")
         return await query.message.answer(text=start_page, reply_markup=StartKB.start_keyboard())
