@@ -35,7 +35,10 @@ class StartKB:
     @staticmethod
     def subscribe_keyboard():
         subscribe_choice = InlineKeyboardMarkup(
-            inline_keyboard=[[InlineKeyboardButton(text="Перейти", url=config.sub_group_url)]]
+            inline_keyboard=[
+                [InlineKeyboardButton(text="Перейти", url=config.sub_group_url)],
+                [InlineKeyboardButton(text="Проверить подписку", callback_data="check_subscribe")]
+            ]
         )
         return subscribe_choice
 
