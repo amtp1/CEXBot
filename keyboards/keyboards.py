@@ -112,6 +112,7 @@ class PaymentKB:
     @staticmethod
     def receipt():
         receipt_chose = ReplyKeyboardMarkup(
-            resize_keyboard=True, keyboard=[[KeyboardButton(text="Прикрепить чек")]]
+            resize_keyboard=True, keyboard=[[KeyboardButton(text="Прикрепить чек")],
+                                            [KeyboardButton(text="СТАРТ")]]
         )
         return receipt_chose
